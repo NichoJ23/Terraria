@@ -2,9 +2,10 @@ FBox touchingBlock(FBody body, String type) {
   ArrayList<FContact> contacts = body.getContacts();
   
   for (FContact c: contacts) {
+    
     if (c.getBody1() == body) {
       if (c.getBody2().getName() == type) {
-        return (FBox)c.getBody1();
+        return (FBox)c.getBody2();
       }
     } else {
       if (c.getBody1().getName() == type) {

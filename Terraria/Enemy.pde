@@ -35,5 +35,7 @@ class Enemy extends FBox {
   
   void takeDamage(int damage) {
     currentHealth -= damage;
+    
+    
   }
 }

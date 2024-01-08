@@ -5,6 +5,14 @@ void mousePressed() {
     player.isSwinging = true;
     player.swingStart = System.currentTimeMillis();
     player.swingReady = false;
+    // Weapon swings in same direction even if player turns around during swing
+    if (mouseX > player.getX()) {
+      player.swingRight = true;
+      player.facingRight = true;
+    } else {
+      player.swingRight = false;
+      player.facingRight = false;
+    }
   }
 }
 
