@@ -1,19 +1,5 @@
 void mousePressed() {
   println(mouseX, mouseY);
-  
-  if (player.swingReady && player.currentTool != null) {
-    player.isSwinging = true;
-    player.swingStart = System.currentTimeMillis();
-    player.swingReady = false;
-    // Weapon swings in same direction even if player turns around during swing
-    if (mouseX > player.getX()) {
-      player.swingRight = true;
-      player.facingRight = true;
-    } else {
-      player.swingRight = false;
-      player.facingRight = false;
-    }
-  }
 }
 
 void keyPressed() {
@@ -38,6 +24,21 @@ void keyPressed() {
       break;
     case 'd':
       dKey = true;
+      break;
+    case '1':
+      player.currentTool = weapons.get("Wooden Sword");
+      break;
+    case '2':
+      player.currentTool = weapons.get("Copper Pickaxe");
+      break;
+    case '3':
+      player.currentTool = weapons.get("Dirt Block");
+      break;
+    case '4':
+      player.currentTool = weapons.get("Stone Block");
+      break;
+    case '5':
+      player.currentTool = weapons.get("Wood Block");
       break;
   }
 }

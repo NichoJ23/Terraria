@@ -2,18 +2,32 @@ enum PlayerStates {IDLE, WALK, JUMP};
 
 class Player extends FBox {
   FBox groundCollider;
+  FBox downLeftCollider;
+  FBox middleLeftCollider;
+  FBox downRightCollider;
+  FBox middleRightCollider;
+  FBox topCollider;
   FBox swordCollider;
+  
+  Inventory inventory;
   
   int currentHealth;
   int maxHealth;
   
+  int coins;
+  
   int speed;
+  int damageMult;
+  
+  float pickupRange; // Pickup range in terms of blocks
+  
   float stunDuration;
   float invincibleDuration;
   
   boolean facingRight;
   boolean swingRight;
   boolean isSwinging;
+  boolean isMining;
   boolean isStunned;
   boolean isInvincible;
   
@@ -25,9 +39,14 @@ class Player extends FBox {
   int FPS;
   
   boolean swingReady;
+  boolean mineReady;
   long swingStart;
   long swingEnd;
-  Weapon currentTool;
+  long nextMine;
+  
+  Tool currentTool;
+  
+  ArrayList<Enemy> alreadyHit;
   
   PlayerStates animState;
   
@@ -48,18 +67,56 @@ class Player extends FBox {
     groundCollider.setNoStroke();
     groundCollider.setName("player bottom");
     
+    downLeftCollider = new FBox(2, 2);
+    downLeftCollider.setSensor(true);
+    downLeftCollider.setNoFill();
+    downLeftCollider.setNoStroke();
+    downLeftCollider.setName("player down left");
+    
+    downRightCollider = new FBox(2, 2);
+    downRightCollider.setSensor(true);
+    downRightCollider.setNoFill();
+    downRightCollider.setNoStroke();
+    downRightCollider.setName("player down right");
+    
+    middleLeftCollider = new FBox(2, 2);
+    middleLeftCollider.setSensor(true);
+    middleLeftCollider.setNoFill();
+    middleLeftCollider.setNoStroke();
+    middleLeftCollider.setName("player middle left");
+    
+    middleRightCollider = new FBox(2, 2);
+    middleRightCollider.setSensor(true);
+    middleRightCollider.setNoFill();
+    middleRightCollider.setNoStroke();
+    middleRightCollider.setName("player middle right");
+    
+    topCollider = new FBox(2, 2);
+    topCollider.setSensor(true);
+    topCollider.setNoFill();
+    topCollider.setNoStroke();
+    topCollider.setName("player top");
+    
     world.add(groundCollider);
+    world.add(downLeftCollider);
+    world.add(middleLeftCollider);
+    world.add(downRightCollider);
+    world.add(middleRightCollider);
+    
+    inventory = new Inventory(40);
     
     currentHealth = maxHealth = 100;
     
     speed = 75;
+    damageMult = 1;
+    
     stunDuration = 0.25;
     invincibleDuration = 0.5;
     
     FPS = 12;
     animStart = System.currentTimeMillis();
     
-    currentTool = weapons.get("Wooden Sword");
+    currentTool = weapons.get("Wood Block");
     swingReady = true;
   }
   
@@ -72,21 +129,99 @@ class Player extends FBox {
     if (isInvincible && time > invincibleEnd) {
       isInvincible = false;
     }
+    if (mineReady == false && time > nextMine) {
+      mineReady = true;
+    }
     
+    // Position colliders
     groundCollider.setPosition(getX(), getY() + tileSize*3/2);
+    downLeftCollider.setPosition(getX() - tileSize, getY() + tileSize);
+    middleLeftCollider.setPosition(getX() - tileSize, getY());
+    downRightCollider.setPosition(getX() + tileSize, getY() + tileSize);
+    middleRightCollider.setPosition(getX() + tileSize, getY());
+    
     handleInput();
     
+    // When coming into contact with a 1 block tall ledge, jump to top of it so player can keep running
+    checkForStairs();
+    
     if (isSwinging) {
-      float animLength = currentTool.useTime / 60f;
+      float swingLength = currentTool.useTime / 60f;
       float swingTimePassed = (System.currentTimeMillis() - swingStart) / 1000f;
+      float swingPercent = swingTimePassed / swingLength;
+      float swordLength = 0;
       
-      if (swingTimePassed > animLength) {
+      if (swordCollider != null) {
+        swordLength = swordCollider.getHeight();
+      }
+      
+      if (currentTool instanceof Pickaxe && mineReady && mousePressed) {
+        attemptMine(mouseX, mouseY);
+        // Next time we can mine is determined by mine cooldown (multiply by 10 to convert from centiseconds to milliseconds)
+        nextMine = System.currentTimeMillis() + (int)(((Pickaxe)currentTool).mineSpeed/60f * 1000);
+        mineReady = false;
+      }
+      
+      // If the timer for the swing is up, stop swing
+      if (swingTimePassed > swingLength) {
         isSwinging = false;
         swingEnd = System.currentTimeMillis();
+        
+        if (swordCollider != null) {
+          // Remove sword collider from world so it won't interact with anything
+          world.remove(swordCollider);
+          swordCollider = null;
+        }
+      }
+      
+      if (swordCollider != null) {
+        // Calculate angle the tool is at
+        float toolAngle = 0;
+        if (swingRight) {
+          toolAngle -= PI/6;
+          
+          toolAngle += swingPercent * 5/6 * PI;
+        } else {
+          toolAngle += PI/6;
+          
+          toolAngle -= swingPercent * 5/6 * PI;
+        }
+        
+        swordCollider.setRotation(toolAngle);
+      
+        // Sword needs to be relocated every frame to player's position (i don't know how parents/children work in fisica)
+        // Rotation happens around centre of rect, so need to offset position so it pivots around hilt
+        PVector positionOffset = new PVector(cos(HALF_PI - toolAngle) * swordLength, -sin(HALF_PI - toolAngle) * swordLength);
+        swordCollider.setPosition(player.getX() + positionOffset.x, player.getY() + positionOffset.y);
+        
+        //Check if sword hits an enemy. If so, call their takeDamage function
+        ArrayList<FBody> enemies = touchingBodies(swordCollider, "enemy");
+        for (FBody f: enemies) {
+          Enemy e = (Enemy)f;
+          
+          // Check if we have hit this enemy before
+          if (!alreadyHit.contains(e)) {
+            e.takeDamage(calculateDamage(), currentTool.knockBack, new PVector(getX(), getY()));
+            alreadyHit.add(e);
+          }
+        }
+      } else if (currentTool instanceof Placeable) {
+        // Reusing mineReady for block placement
+        if (mineReady && mousePressed) {
+          attemptPlace(mouseX, mouseY);
+          
+          nextMine = System.currentTimeMillis() + (int)(((Placeable)currentTool).useTime/60f * 1000);
+          mineReady = true;
+        }
       }
     } else if (!swingReady) {
-      if ((System.currentTimeMillis() - swingEnd) / 1000f > currentTool.useTime / 60f) {
+      // Player can again swing once the weapon's cooldown has passed
+      if (currentTool instanceof Pickaxe) {
         swingReady = true;
+      } else {
+        if ((System.currentTimeMillis() - swingEnd) / 1000f > currentTool.useTime / 60f) {
+          swingReady = true;
+        }
       }
     }
     
@@ -106,6 +241,10 @@ class Player extends FBox {
       if ((upKey || wKey) && touchingBlock(groundCollider, "ground") != null) {
         setVelocity(getVelocityX(), -330);
       }
+    }
+    
+    if (mousePressed && swingReady && currentTool != null) {
+      startSwing();
     }
   }
   
@@ -128,11 +267,13 @@ class Player extends FBox {
           animState = PlayerStates.WALK;
           animStart = System.currentTimeMillis();
           
-          facingRight = vx > 0;
         }
       } else {
         animState = PlayerStates.IDLE;
       }
+    } else {
+      // When stunned, will be moving one way while facing the other
+      facingRight = !facingRight;
     }
     
     boolean torsoAnimating = true;
@@ -238,19 +379,9 @@ class Player extends FBox {
     playerImg.pushMatrix();
     playerImg.translate(playerImg.width/2, playerImg.height/2);
     
-    if (isSwinging) {
-      if (swingRight) {
-        playerImg.image(headRight, 0, 0);
-      } else {
-        playerImg.image(headLeft, 0, 0);
-      }
-    } else {
-      if (facingRight) {
-        playerImg.image(headRight, 0, 0);
-      } else {
-        playerImg.image(headLeft, 0, 0);
-      }
-    }
+    // Player bobs as they walk. Will need to use chest animation to figure out if player is on an UP frame
+    int headOffset = 0;
+    
     
     float timePassed = (System.currentTimeMillis() - animStart) / 1000f;
     
@@ -285,12 +416,19 @@ class Player extends FBox {
         
         playerImg.image(currentFrame, 0, 0);
       } else {
+        // Calculate how far we are into the animation and choose which frame we are on
         float animLength = 1f / FPS * torsoFrames.length;
         float animPercent = (timePassed % animLength) / animLength;
-      
-        PImage currentFrame = torsoFrames[1];//(int)(animPercent * torsoFrames.length)];
+
+        int frameIndex = (int)(animPercent * torsoFrames.length);
+        PImage currentFrame = torsoFrames[frameIndex];
         
         playerImg.image(currentFrame, 0, 0);
+        
+        // DOWN frames are on frame 1 & 3. All others are up
+        if (frameIndex % 3 != 0) {
+          headOffset = -1;
+        }
       }
     }
     
@@ -299,7 +437,7 @@ class Player extends FBox {
       float animPercent = (timePassed % animLength) / animLength;
     
       PImage currentFrame;
-      if (swingRight == facingRight) {
+      if (!isSwinging || swingRight == facingRight) {
         currentFrame = legsFrames[(int)(animPercent * legsFrames.length)];
       } else {
         currentFrame = legsFrames[legsFrames.length - 1 - (int)(animPercent * legsFrames.length)];
@@ -309,11 +447,90 @@ class Player extends FBox {
       playerImg.image(currentFrame, 0, 0);
     }
     
+    if (isSwinging) {
+      if (swingRight) {
+        playerImg.image(headRight, 0, headOffset);
+      } else {
+        playerImg.image(headLeft, 0, headOffset);
+      }
+    } else {
+      if (facingRight) {
+        playerImg.image(headRight, 0, headOffset);
+      } else {
+        playerImg.image(headLeft, 0, headOffset);
+      }
+    }
+    
     playerImg.popMatrix();
     playerImg.endDraw();
     imageMode(CORNER);
     
     attachImage(playerImg);
+  }
+  
+  void checkForStairs() {
+    // Can't skip if not on ground (to avoid increasing jump height to and extra block)
+    if (touchingBlock(groundCollider, "ground") == null) return;
+    
+    float vx = getVelocityX();
+    if (vx < 0) {
+      // If bottom left collider is touching a block but middle left isn't, we know it's a 1 block tall ledge and jump over it
+      // Slight number tweaks just to make sure everything runs smoothly
+      if (touchingBlock(downLeftCollider, "ground") != null && touchingBlock(middleLeftCollider, "ground") == null) {
+        setPosition(getX() - 2, getY() - tileSize - 1);
+      }
+    } else if (vx > 0) {
+      // If bottom right collider is touching a block but middle right isn't, we know it's a 1 block tall ledge and jump over it
+      if (touchingBlock(downRightCollider, "ground") != null && touchingBlock(middleRightCollider, "ground") == null) {
+        setPosition(getX() + 2, getY() - tileSize - 1);
+      }
+    }
+  }
+  
+  void startSwing() {
+    isSwinging = true;
+    swingStart = System.currentTimeMillis();
+    swingReady = false;
+    // Weapon swings in same direction even if player turns around during swing
+    if (mouseX > width/2) {
+      swingRight = true;
+      facingRight = true;
+    } else {
+      swingRight = false;
+      facingRight = false;
+    }
+    
+    if (currentTool instanceof Sword) {
+      // Use pythagorean to get length of sword
+      float swordLength = sqrt(currentTool.image.width*currentTool.image.width + currentTool.image.height*currentTool.image.height);
+      swordLength *= 0.67;
+      
+      swordCollider = new FBox(10, swordLength);
+      
+      swordCollider.setSensor(true);
+      swordCollider.setNoFill();
+      swordCollider.setNoStroke();
+      swordCollider.setName("sword collider");
+      
+      world.add(swordCollider);
+      
+      alreadyHit = new ArrayList<Enemy>();
+    } else if (currentTool instanceof Pickaxe) {
+      // Use pythagorean to get length of sword
+      float pickaxeLength = sqrt(currentTool.image.width*currentTool.image.width + currentTool.image.height*currentTool.image.height);
+      pickaxeLength *= 0.6;
+      
+      swordCollider = new FBox(25, pickaxeLength);
+      
+      swordCollider.setSensor(true);
+      swordCollider.setNoFill();
+      swordCollider.setNoStroke();
+      swordCollider.setName("sword collider");
+      
+      world.add(swordCollider);
+      
+      alreadyHit = new ArrayList<Enemy>();
+    }
   }
   
   void takeDamage(int damage, PVector origin) {
@@ -346,6 +563,66 @@ class Player extends FBox {
     
     // Set the animation state to jumping so will be in airborne animation while stunned
     animState = PlayerStates.JUMP;
+  }
+  
+  void attemptMine(int x, int y) {
+    // Can only mine if we have a pickaxe
+    if (currentTool instanceof Pickaxe) {
+      // Get the block at the mouse's position
+      Block block = (Block)getBlockAt(getWorldCoords(x, y));
+      // Check to see if the block exists
+      if (block == null) return;
+      
+      // Check to see if block is too far away
+      if (dist(getX(), getY(), block.getX(), block.getY()) > 65) return;
+      
+      // Damage the block
+      block.takeDamage(((Pickaxe)currentTool).power);
+    }
+  }
+  
+  void attemptPlace(int x, int y) {
+    // Can only mine if we have a pickaxe
+    if (currentTool instanceof Placeable) {
+      Placeable tool = (Placeable)currentTool;
+      PVector worldCoords = getWorldCoords(x, y);
+      PVector worldIndex = getWorldIndex(worldCoords);
+      PVector blockCoords = new PVector(worldIndex.x * tileSize, worldIndex.y * tileSize);
+      int playerX = (int)getX();
+      int playerY = (int)getY();
+      int playerWidth = (int)getWidth();
+      int playerHeight = (int)getHeight();
+      
+      // Get the block at the mouse's position
+      Block block = (Block)getBlockAt(getWorldCoords(x, y));
+      // Check to see if there is already a block there
+      if (block != null) return;
+      
+      // Check to see if block is too far away
+      if (dist(playerX, playerY, worldCoords.x, worldCoords.y) > 65) return;
+      
+      Block testBlock = newDirtBlock();
+      String edges = testBlock.getEdges((int)worldIndex.x, (int)worldIndex.y);
+      
+      // check if adjacent to another block. Can only build off other blocks, can't place mid-air
+      if (!edges.contains("1")) return;
+      
+      if (playerX + playerWidth/2f > blockCoords.x - tileSize/2f && playerX - playerWidth/2f < blockCoords.x + tileSize/2f && playerY + playerHeight/2f > blockCoords.y - tileSize/2f && playerY - playerHeight/2f < blockCoords.y + tileSize/2f) {
+        return;
+      }
+      
+      // Place the block
+      tool.place((int)worldIndex.x, (int)worldIndex.y);
+    }
+  }
+  
+  int calculateDamage() {
+    if (currentTool instanceof Tool) {
+      return currentTool.damage * damageMult;
+    }
+    
+    // Do no damage if we what we're holding isn't a weapon
+    return 0;
   }
   
   void reset() {

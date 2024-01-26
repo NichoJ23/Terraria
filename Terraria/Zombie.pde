@@ -1,6 +1,6 @@
 class Zombie extends Walker {
   Zombie(int x, int y) {
-    super(x, y, 25, 30, 45, 6, 14, 60, 25, true, zombieWalkRight, zombieWalkLeft);
+    super(x, y, tileSize*2, (int)(tileSize*2.8), 45, 6, 0, 14, 60, 25, true, zombieWalkRight, zombieWalkLeft);
   }
   
   void update() {

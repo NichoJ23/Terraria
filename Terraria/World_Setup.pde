@@ -1,4 +1,4 @@
-void setupTiles() {
+void setupTiles() {  
   blocks = new Block[map.width][map.height];
   
   for (int x = 0; x < map.width; x++) {
@@ -7,23 +7,17 @@ void setupTiles() {
       
       switch (c) {
         case brown:
-          Block b = new Block(x * tileSize, y * tileSize);
-          b.setName("ground");
+          Block b = new Block(x * tileSize, y * tileSize, 50, 2, dirt);
           b.type = BlockTypes.DIRT;
           
           String edges = getEdges(map, x, y, c);
-          if (edges.equals("1111")) {
-            b.attachImage(dirt);
-          } else {
-            b.attachImage(grass.get(edges));
-          }
+          b.attachImage(dirt.get(edges));
           
           blocks[x][y] = b;
           world.add(b);
           break;
         case gray:
-          b = new Block(x * tileSize, y * tileSize);
-          b.setName("ground");
+          b = new Block(x * tileSize, y * tileSize, 100, 1, stone);
           b.type = BlockTypes.STONE;
           
           edges = getEdges(map, x, y, c);
@@ -59,8 +53,25 @@ void setupPlayer() {
 }
 
 void setupWeapons() {
-  weapons = new HashMap<String, Weapon>();
-  weapons.put("Wooden Sword", new Weapon(7, 20, 5, 4, woodenSword));
+  weapons = new HashMap<String, Tool>();
+  weapons.put("Wooden Sword", new Sword(7, 20, 5, 4, woodenSword));
+  weapons.put("Copper Pickaxe", new Pickaxe(4, 23, 2, 0.04, 15, 35, 1, copperPickaxe));
+  weapons.put("Dirt Block", new Placeable(15, newDirtBlock()));
+  weapons.put("Stone Block", new Placeable(15, newStoneBlock()));
+  weapons.put("Wood Block", new Placeable(15, newWoodBlock()));
+}
+
+void setupData() {
+  itemStacks = new HashMap<ItemTypes, Integer>();
+  itemStacks.put(ItemTypes.COPPER_COIN, 99999);
+  itemStacks.put(ItemTypes.SILVER_COIN, 99999);
+  itemStacks.put(ItemTypes.GOLD_COIN, 99999);
+  itemStacks.put(ItemTypes.PLATINUM_COIN, 99999);
+  itemStacks.put(ItemTypes.WOODEN_SWORD, 1);
+  itemStacks.put(ItemTypes.COPPER_PICKAXE, 1);
+  itemStacks.put(ItemTypes.DIRT, 9999);
+  itemStacks.put(ItemTypes.STONE, 9999);
+  itemStacks.put(ItemTypes.WOOD, 9999);
 }
 
 String getEdges(PImage map, int x, int y, color c) {
