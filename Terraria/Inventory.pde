@@ -12,6 +12,8 @@ class Inventory {
   void addItem(ItemTypes type, int amount) {
     boolean added = false;
     for (InventoryItem item: items) {
+      if (item == null) continue;
+      
       // See if we already have some of this item and it has space for more
       if (item.type == type && !item.isFilled()) {
         if (item.currentStacks + amount > item.maxStacks) {
@@ -46,6 +48,7 @@ class Inventory {
     if (newIndex >= 0) {
       items[newIndex] = newItem;
     }
+    
   }
   
   int getFirstEmptySlot() {

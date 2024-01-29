@@ -5,6 +5,11 @@ void setupImages() {
   map = loadImage("Terraria Demo Map.png");
   woodenSword = loadImage("Swingables/Wooden_Sword.png");
   copperPickaxe = loadImage("Swingables/Copper_Pickaxe.png");
+  copperCoin = loadImage("Items/Copper Coin.png");
+  silverCoin = loadImage("Items/Silver Coin.png");
+  goldCoin = loadImage("Items/Gold Coin.png");
+  platinumCoin = loadImage("Items/Platinum Coin.png");
+  
   //woodenSword.resize(tileSize * 3/2, tileSize * 3/2);
   headRight = loadImage("Player/Hair1_02.png");
   headRight.resize(25, 30);

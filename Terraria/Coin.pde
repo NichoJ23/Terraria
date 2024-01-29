@@ -15,12 +15,12 @@ class Coin extends Dropped {
         value = 1;
         break;
       case SILVER:
-        value = 10;
-      case GOLD:
         value = 100;
+      case GOLD:
+        value = 10000;
         break;
       case PLATINUM:
-        value = 1000;
+        value = 1000000;
         break;
     }
   }

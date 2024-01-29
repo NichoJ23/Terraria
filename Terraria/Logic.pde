@@ -77,29 +77,33 @@ FBox getBlockAt(PVector pos) {
 }
 
 void dropCoins(int amount, int x, int y) {
-  if (amount >= 1000) {
-    int numCoins = amount / 1000; // integer division so automatically truncates
+  println(amount);
+  if (amount >= 1000000) {
+    int numCoins = amount / 1000000; // integer division so automatically truncates
     Coin platCoin = new Coin(x, y, numCoins, CoinTypes.PLATINUM);
     
+    droppedItems.add(platCoin);
     world.add(platCoin);
     
-    amount -= numCoins * 1000;
+    amount -= numCoins * 1000000;
+  }
+  if (amount >= 10000) {
+    int numCoins = amount / 10000; // integer division so automatically truncates
+    Coin goldCoin = new Coin(x, y, numCoins, CoinTypes.GOLD);
+    
+    droppedItems.add(goldCoin);
+    world.add(goldCoin);
+    
+    amount -= numCoins * 10000;
   }
   if (amount >= 100) {
     int numCoins = amount / 100; // integer division so automatically truncates
-    Coin goldCoin = new Coin(x, y, numCoins, CoinTypes.GOLD);
-    
-    world.add(goldCoin);
-    
-    amount -= numCoins * 100;
-  }
-  if (amount >= 10) {
-    int numCoins = amount / 10; // integer division so automatically truncates
     Coin silverCoin = new Coin(x, y, numCoins, CoinTypes.SILVER);
     
+    droppedItems.add(silverCoin);
     world.add(silverCoin);
     
-    amount -= numCoins * 10;
+    amount -= numCoins * 100;
   }
   
   if (amount >= 1) {
@@ -107,6 +111,7 @@ void dropCoins(int amount, int x, int y) {
     int numCoins = amount;
     Coin copperCoin = new Coin(x, y, numCoins, CoinTypes.COPPER);
     
+    droppedItems.add(copperCoin);
     world.add(copperCoin);
   }
 }

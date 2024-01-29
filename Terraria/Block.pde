@@ -69,7 +69,6 @@ class Block extends FBox {
   
   void reEvaluateEdges() {
     String edges = getEdges(arrayX, arrayY);
-    println(edges);
     attachImage(sprites.get(edges));
   }
   

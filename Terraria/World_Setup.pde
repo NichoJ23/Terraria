@@ -54,7 +54,7 @@ void setupPlayer() {
 
 void setupWeapons() {
   weapons = new HashMap<String, Tool>();
-  weapons.put("Wooden Sword", new Sword(7, 20, 5, 4, woodenSword));
+  weapons.put("Wooden Sword", new Sword(20, 20, 5, 4, woodenSword)); // first number was originally 7, increased for more damage
   weapons.put("Copper Pickaxe", new Pickaxe(4, 23, 2, 0.04, 15, 35, 1, copperPickaxe));
   weapons.put("Dirt Block", new Placeable(15, newDirtBlock()));
   weapons.put("Stone Block", new Placeable(15, newStoneBlock()));
@@ -72,6 +72,8 @@ void setupData() {
   itemStacks.put(ItemTypes.DIRT, 9999);
   itemStacks.put(ItemTypes.STONE, 9999);
   itemStacks.put(ItemTypes.WOOD, 9999);
+  
+  droppedItems = new ArrayList<Dropped>();
 }
 
 String getEdges(PImage map, int x, int y, color c) {

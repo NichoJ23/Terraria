@@ -3,6 +3,8 @@ class Dropped extends FBox {
   ItemTypes type;
   PImage image;
   
+  boolean destroyed; // Whether or not this object has destroyed itself (so the for loop running it knows the array has shrunk)
+  
   Dropped(int w, int h, int x, int y, int _stacks, ItemTypes _type, PImage _image) {
     super(w, h);
     setPosition(x, y);
@@ -25,13 +27,17 @@ class Dropped extends FBox {
     if (dist(myX, myY, playerX, playerY) < player.pickupRange * tileSize) {
       PVector attraction = PVector.sub(new PVector(playerX, playerY), new PVector(myX, myY));
       attraction.normalize();
-      attraction.mult(40);
+      attraction.mult(400);
       
       setVelocity(attraction.x, attraction.y);
     }
     
     if (touchingBlock(this, "player") != null) {
+      player.inventory.addItem(type, stacks);
       
+      droppedItems.remove(droppedItems.indexOf(this));
+      world.remove(this);
+      destroyed = true;
     }
   }
 }

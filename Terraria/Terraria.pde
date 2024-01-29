@@ -48,6 +48,7 @@ FWorld world;
 Player player;
 
 ArrayList<Enemy> enemies;
+ArrayList<Dropped> droppedItems;
 
 int tileSize;
 
@@ -91,5 +92,11 @@ void updateWorld() {
     Enemy e = enemies.get(i);
     e.checkEffects();
     e.update();
+  }
+  
+  for (int i = 0; i < droppedItems.size(); i++) {
+    Dropped d = droppedItems.get(i);
+    d.update();
+    
   }
 }
